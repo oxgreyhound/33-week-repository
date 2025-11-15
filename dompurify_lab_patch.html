@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>patch lab, vulnerable != vulnerable</title>
+<!-- add some inline CSS -->
+</head>
+
+<body style="text-align: center;">
+<h1>Input field to patch</h1>
+<h5>Patch lab with DOMPurify, vulnerable != vulnerable </h5>
+
+<input type="text" id="user_input" placeholder="Input here:">
+<button onclick="output_func()">submit input</button>
+<p id="output" style="color: red;"></p> <!-- xss bitch -->
+<p id="output2" style="color: green;"></p> <!-- no fun  -->
+
+<script type="text/javascript" src="/home/greyhound/Desktop/33_weeks/javascript/DOMPurify/dist/purify.js"></script>
+
+<script>
+function output_func() {
+    let user_input = document.getElementById("user_input").value.trim(); //get text from input
+
+    //unsanitized
+    document.getElementById("output").innerHTML = user_input; //print it
+    console.log(user_input + " input (1)") //print in console
+
+    //sanitized (only with DOMPurify)
+    const sanitized = DOMPurify.sanitize(user_input)
+    document.getElementById("output2").textContent = sanitized; //print it
+    console.log(sanitized + " input (2)") //print in console
+}
+</script>
+
+</body>
+</html>
