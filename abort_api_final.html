@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+    <meta charset="utf-8">
+    <title>Abort API final</title>
+    <style>
+        .wrapper {
+            width: 45%;
+            margin: 0 auto;
+        }
+
+        video {
+            max-width: 70%;
+        }
+
+        .wrapper > div {
+            margin-bottom: 10px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        button {
+            background-color: rgb(39, 39, 39);
+            color: rgb(255, 255, 255);
+            border: solid;
+            border-color: white;
+            border-width: 1px;
+            padding: 2px 5px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body style="background-color: rgb(23, 24, 26); color: white;">
+<div class="wrapper">
+    <h1 style="color: rgb(255, 187, 0); width: 80%;">JavaScript Client using the Fetch API to retrieve a video.</h1>
+    <h5>Client handles timeouts and errors using AbortController.</h5>
+
+    <!--Controls: Download button, Cancel/Abort button, updates-->
+    <div class="controls">
+        <button class="download">Download Video</button>
+        <button class="abort hidden">Cancel Download</button>
+        <p class="updates"></p>
+    </div>
+
+    <!--div class for video-->
+    <div class="videoWrapper hidden"></div>
+</div>
+
+<script>
+    const downloadUrl = "http://127.0.0.1:5000/video/php.mp4";                          //URL
+    
+    //References to DOM elements
+    const videoWrapper   = document.querySelector(".videoWrapper");                     //Container for video element
+    const downloadButton = document.querySelector(".download");                         //Download button
+    const abortButton    = document.querySelector(".abort");                            //Cancel/abort download button
+    const updates        = document.querySelector(".updates");                          //Updates/status
+
+    let controller;                                                                     //Set controller var, current AbortController
+    let timeoutId;                                                                      //Set timeoutId var, timeout id for the request
+
+    downloadButton.addEventListener("click", videoFetch);                               //Eventlistener for click to call videoFetch function
+
+    abortButton.addEventListener("click", () => {                                       //Eventlistener for click to abort download
+        if (controller) {
+            controller.abort();                                                         //Controller triggers abort/cancel the ongoing fetch request
+
+            updates.textContent = "Download aborted by user.";                          //Updates UI & logs to console
+            console.log("Download aborted by user!");
+            downloadButton.classList.remove("hidden");
+            abortButton.classList.add("hidden");
+        }
+    });
+
+    function videoFetch() {                                                             //Download function
+        controller = new AbortController();                                             //Create a new AbortController
+        const signal = controller.signal;                                               //Set AbortController signal property
+        
+        updates.textContent = "Video awaiting download...";                             //Awaiting download
+        downloadButton.classList.add("hidden");                                         //Updates UI
+        abortButton.classList.remove("hidden");
+
+        timeoutId = setTimeout(() => {                                                  //Timeout function (10s)
+            if (controller) {
+                controller.abort();
+
+                updates.textContent = "Download timed out.";                            //Updates UI & logs to console
+                console.log("Download timed out!");
+                downloadButton.classList.remove("hidden"); 
+                abortButton.classList.add("hidden");
+            }
+        }, 10000);                                                                      //Set 10k ms
+
+        fetch(downloadUrl, { signal })                                                  //Start fetch with abort signal
+            .then((res) => {
+                if (!res.ok) {
+                    throw new Error(`HTTP status code: ${res.status}`);                 //Throw new error if http status not ok
+                }
+                return res.blob();                                                      //Convert response body to blob
+            })
+            .then((myBlob) => {
+                clearTimeout(timeoutId);                                                //clear timeoutId
+                const video = document.createElement("video");                          //Create video DOM element
+                video.setAttribute("controls", "");                                     //Set video controls attributes
+                video.src = URL.createObjectURL(myBlob);                                //Create URL for blob
+
+                updates.textContent = "Video ready to play:";                           //Updates text add video element to DOM and make video container !hidden
+                videoWrapper.appendChild(video);
+                videoWrapper.classList.remove("hidden");
+
+                abortButton.classList.add("hidden");                                    //Abort/download button > hidden
+                downloadButton.classList.add("hidden");
+            })
+            .catch((err) => {                                                           //Catch error and clear timeout if error thrown
+                clearTimeout(timeoutId);
+                if (err.name === "AbortError") {                                        //Update UI & logs to console
+                    console.log("Fetch error/Abort Error:", err.message);
+                    if (!updates.textContent) {
+                        updates.textContent = "Download aborted."; 
+                    }
+                } else {
+                    console.error("Download error:", err);
+                    updates.textContent = "Download error: " + err.message;
+                }
+
+                downloadButton.classList.remove("hidden");                              //Reset Download/abort
+                abortButton.classList.add("hidden");
+            })
+            .finally(() => {                                                            //Cleanup and sleep jeez im tired
+                controller = null;
+                timeoutId = null;
+            });
+    }
+</script>
+</body>
+</html>
